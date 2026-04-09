@@ -1,24 +1,50 @@
-name: AWS Login Test
+name: Dry Run Workflow
 
 on:
   push:
     branches:
-      - main
+      - dv_feature
 
 jobs:
-  aws-login:
+  dry-run:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+      # ✅ Simulate build number (like Jenkins)
+      - name: Generate version
+        run: |
+          VERSION="3.6.0.0.${{ github.run_number }}"
+          echo "Version: $VERSION"
 
-      - name: Verify AWS login
-        run: aws sts get-caller-identity
+      # ✅ Install tools
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip jq
+
+      # ✅ Simulate lambda file path
+      - name: Set lambda file path
+        run: echo "Using qa_lambdas.json"
+
+      # ✅ Dry run zip (no AWS)
+      - name: Zip Lambda Scripts (dry run)
+        run: |
+          for dir in $(jq -r '.[].code' qa_lambdas.json); do
+            name=$(basename $dir)
+            echo "Zipping $dir -> $name.zip"
+            zip -r "$name.zip" "$dir"
+          done
+
+      # ✅ Fake AWS commands (no real execution)
+      - name: Simulate AWS commands
+        run: |
+          echo "aws sts get-caller-identity"
+          echo "aws ec2 describe-subnets"
+          echo "aws lambda update-function-code"
+
+      # ✅ Finish
+      - name: Done
+        run: echo "Dry run completed successfully"
